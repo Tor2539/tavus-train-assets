@@ -11,11 +11,18 @@ jobs:
       - name: Assemble parts and decode native JPEG
         run: |
           set -euo pipefail
-          # Assemble aa/ab/ac from chunks if full parts missing/placeholder
           for part in aa ab ac; do
-            if [ ! -f "travis-face.b64.${part}" ] || [ "$(wc -c < "travis-face.b64.${part}")" -lt 1000 ] || grep -q '^\$file:' "travis-face.b64.${part}"; then
-              cat travis-face.b64.${part}.[0-7] > "travis-face.b64.${part}"
-            fi
+            out="travis-face.b64.${part}"
+            : > "$out"
+            for i in 0 1 2 3 4 5 6 7; do
+              chunk="${out}.${i}"
+              if [ -f "$chunk" ] && [ "$(wc -c < "$chunk")" -gt 1000 ] && ! grep -q '^\$file:' "$chunk"; then
+                cat "$chunk" >> "$out"
+              elif ls ${chunk}.s[0-9]* >/dev/null 2>&1; then
+                cat $(ls ${chunk}.s* | sort -V) >> "$out"
+              fi
+            done
+            echo "part $part bytes=$(wc -c < "$out")"
           done
           cat travis-face.b64.aa travis-face.b64.ab travis-face.b64.ac | base64 -d > travis-face.jpg
           file travis-face.jpg
