@@ -1,0 +1,35 @@
+name: Decode Travis face JPEG
+on:
+  push:
+    paths:
+      - 'travis-face.b64'
+      - '.github/workflows/decode-travis-face.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode base64 to JPEG
+        run: |
+          base64 -d travis-face.b64 > travis-face.jpg
+          file travis-face.jpg
+          python3 - <<'PY'
+          b=open("travis-face.jpg","rb").read()
+          assert b[:3]==bytes([255,216,255]), b[:3]
+          assert len(b)>1000
+          print("ok", len(b))
+          PY
+      - name: Commit JPEG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add travis-face.jpg
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Decode travis-face.b64 to binary JPEG for Tavus"
+          git push
