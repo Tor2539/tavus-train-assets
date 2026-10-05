@@ -1,0 +1,29 @@
+name: Decode navel crop hex2
+on:
+  workflow_dispatch:
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode
+        run: |
+          set -euo pipefail
+          cat $(ls navel-crop.h2.* | sort -V) | xxd -r -p > travis-navel-crop.jpg
+          cp travis-navel-crop.jpg travis-face.jpg
+          SIZE=$(wc -c < travis-navel-crop.jpg | tr -d ' ')
+          SHA=$(sha1sum travis-navel-crop.jpg | awk '{print $1}')
+          echo "size=$SIZE sha=$SHA"
+          test "$SIZE" = "48178"
+          test "$SHA" = "41c30dd77ac94dd70f79a01b3ca6cc38aa8c2be4"
+          python3 - <<'PY'
+          from PIL import Image
+          im=Image.open("travis-navel-crop.jpg")
+          print(im.size)
+          assert im.size==(1086,1000)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add travis-navel-crop.jpg travis-face.jpg
+          git commit -m "Decode travis-navel-crop.jpg (1086x1000 navel crop)" || echo nochange
+          git push
