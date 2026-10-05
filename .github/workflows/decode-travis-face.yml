@@ -16,10 +16,11 @@ jobs:
             : > "$out"
             for i in 0 1 2 3 4 5 6 7; do
               chunk="${out}.${i}"
-              if [ -f "$chunk" ] && [ "$(wc -c < "$chunk")" -gt 1000 ] && ! grep -q '^\$file:' "$chunk"; then
-                cat "$chunk" >> "$out"
-              elif ls ${chunk}.s[0-9]* >/dev/null 2>&1; then
+              # Prefer verified .s* micro-segments over any full chunk (may be corrupted)
+              if ls ${chunk}.s[0-9]* >/dev/null 2>&1; then
                 cat $(ls ${chunk}.s* | sort -V) >> "$out"
+              elif [ -f "$chunk" ] && [ "$(wc -c < "$chunk")" -gt 1000 ] && ! grep -q '^\$file:' "$chunk"; then
+                cat "$chunk" >> "$out"
               fi
             done
             echo "part $part bytes=$(wc -c < "$out")"
