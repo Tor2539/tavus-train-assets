@@ -1,1 +1,43 @@
-$file:/workspace/tavus-training/decode-travis-face.yml
+name: Decode Travis face JPEG
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble parts and decode native JPEG
+        run: |
+          set -euo pipefail
+          # Assemble aa/ab/ac from chunks if full parts missing/placeholder
+          for part in aa ab ac; do
+            if [ ! -f "travis-face.b64.${part}" ] || [ "$(wc -c < "travis-face.b64.${part}")" -lt 1000 ] || grep -q '^\$file:' "travis-face.b64.${part}"; then
+              cat travis-face.b64.${part}.[0-7] > "travis-face.b64.${part}"
+            fi
+          done
+          cat travis-face.b64.aa travis-face.b64.ab travis-face.b64.ac | base64 -d > travis-face.jpg
+          file travis-face.jpg
+          python3 - <<'PY2'
+          from PIL import Image
+          import hashlib
+          b=open("travis-face.jpg","rb").read()
+          assert b[:3]==bytes([255,216,255]), b[:3]
+          assert len(b)==63397, len(b)
+          assert hashlib.sha1(b).hexdigest()=="cd832e3ebafb2e27354d85a40322358ef0c16c0c"
+          im=Image.open("travis-face.jpg")
+          assert im.size==(1086,1448), im.size
+          print("ok", len(b), im.size)
+          PY2
+      - name: Commit assembled parts and JPEG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add travis-face.b64.aa travis-face.b64.ab travis-face.b64.ac travis-face.jpg
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Decode native Travis boardroom JPEG 1086x1448 (q45)"
+          git push
