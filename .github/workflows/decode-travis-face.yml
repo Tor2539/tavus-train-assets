@@ -28,15 +28,14 @@ jobs:
           cat travis-face.b64.aa travis-face.b64.ab travis-face.b64.ac | base64 -d > travis-face.jpg
           file travis-face.jpg
           python3 - <<'PY2'
-          from PIL import Image
-          import hashlib
+          import hashlib, subprocess
           b=open("travis-face.jpg","rb").read()
           assert b[:3]==bytes([255,216,255]), b[:3]
           assert len(b)==63397, len(b)
           assert hashlib.sha1(b).hexdigest()=="cd832e3ebafb2e27354d85a40322358ef0c16c0c"
-          im=Image.open("travis-face.jpg")
-          assert im.size==(1086,1448), im.size
-          print("ok", len(b), im.size)
+          out=subprocess.check_output(["file","travis-face.jpg"], text=True)
+          assert "1086x1448" in out, out
+          print("ok", len(b), out.strip())
           PY2
       - name: Commit assembled parts and JPEG
         run: |
