@@ -1,0 +1,27 @@
+name: decode-navel-b64
+on:
+  workflow_dispatch:
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode JPEG
+        run: |
+          set -euo pipefail
+          cat navel-crop.b64.00 navel-crop.b64.01 navel-crop.b64.02 | base64 -d > travis-navel-crop.jpg
+          test "$(wc -c < travis-navel-crop.jpg)" -eq 48178
+          echo "41c30dd77ac94dd70f79a01b3ca6cc38aa8c2be4  travis-navel-crop.jpg" | sha1sum -c -
+          python3 - <<'PY'
+          from PIL import Image
+          im=Image.open('travis-navel-crop.jpg')
+          assert im.size==(1086,1000), im.size
+          print('ok', im.size)
+          PY
+      - name: Commit
+        run: |
+          git config user.name "tavus-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add travis-navel-crop.jpg
+          git commit -m "Add travis-navel-crop.jpg 1086x1000" || echo "no change"
+          git push
