@@ -1,0 +1,34 @@
+name: Decode Travis navel-crop JPEG
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble base64 parts and decode JPEG
+        run: |
+          set -euo pipefail
+          cat $(ls navel-crop.b64.* | sort -V) | base64 -d > travis-navel-crop.jpg
+          cp travis-navel-crop.jpg travis-face.jpg
+          python3 - <<'PY2'
+          from PIL import Image
+          import hashlib
+          b=open("travis-navel-crop.jpg","rb").read()
+          assert b[:3]==bytes([255,216,255]), b[:3]
+          assert len(b)==59981, len(b)
+          assert hashlib.sha1(b).hexdigest()=="723c5eb1f218c2e642ccce3e3652a50c6f76a06e"
+          im=Image.open("travis-navel-crop.jpg")
+          assert im.size==(1086,1000), im.size
+          print("ok", len(b), im.size, hashlib.sha1(b).hexdigest())
+          PY2
+      - name: Commit decoded JPEGs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add travis-navel-crop.jpg travis-face.jpg
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Decode Travis navel-crop JPEG 1086x1000 (above navel)"
+          git push
