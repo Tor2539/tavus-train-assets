@@ -1,0 +1,27 @@
+name: Decode navel crop (b64 4-part)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode, verify, commit
+        run: |
+          set -euo pipefail
+          for p in aa ab ac ad; do echo "navel4.b64.$p bytes=$(tr -d '\n\r ' < navel4.b64.$p | wc -c)"; done
+          cat navel4.b64.aa navel4.b64.ab navel4.b64.ac navel4.b64.ad | tr -d '\n\r ' | base64 -d > travis-navel-crop.jpg
+          SIZE=$(wc -c < travis-navel-crop.jpg)
+          SHA=$(sha1sum travis-navel-crop.jpg | awk '{print $1}')
+          file travis-navel-crop.jpg
+          echo "size=$SIZE sha=$SHA"
+          test "$SIZE" = "48178"
+          test "$SHA" = "41c30dd77ac94dd70f79a01b3ca6cc38aa8c2be4"
+          file travis-navel-crop.jpg | grep -q '1086x1000'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add travis-navel-crop.jpg
+          git commit -m "Decode travis-navel-crop.jpg (1086x1000, sha1 41c30dd7)" || echo "no changes"
+          git push
